@@ -24,13 +24,26 @@
 
     </FrameLayout>
     <TextView
-        android:id="@+id/text_gallery"
+        android:id="@+id/text1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
         android:layout_centerInParent="true"
         android:layout_marginStart="8dp"
         android:layout_marginTop="100dp"
+        android:layout_marginEnd="8dp"
+        android:textAlignment="center"
+        android:text=""
+        android:textColor="@color/starwars"
+        android:textSize="28sp" />
+    <TextView
+        android:id="@+id/text_gallery"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/text1"
+        android:layout_centerInParent="true"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="20dp"
         android:layout_marginEnd="8dp"
         android:textAlignment="center"
         android:text="POJEDYNEK CZAS ZACZĄĆ"

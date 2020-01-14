@@ -11,6 +11,7 @@ public class HomeViewModel extends ViewModel {
     private MutableLiveData<Boolean> withWho;
     private MutableLiveData<Integer> time;
     private MutableLiveData<Boolean> stop;
+    private MutableLiveData<Boolean> stopGame;
 
 
     public HomeViewModel() {
@@ -24,7 +25,8 @@ public class HomeViewModel extends ViewModel {
         time = new MutableLiveData<>();
         time.setValue(60);
         stop = new MutableLiveData<>();
-        //stop.setValue(false);
+        stopGame = new MutableLiveData<>();
+        stopGame.setValue(false);
     }
     public void setTurn(Integer i){
         turn.setValue(i);
@@ -50,5 +52,7 @@ public class HomeViewModel extends ViewModel {
     public LiveData<Integer>getTime(){return time;}
     public void setStop(Boolean i){stop.setValue(i);}
     public LiveData<Boolean>getStop(){return stop;}
+    public void setStopGame(Boolean i){stopGame.setValue(i);}
+    public LiveData<Boolean>getStopGame(){return stopGame;}
 
 }

@@ -31,6 +31,7 @@ public class GameFragment extends Fragment {
 
     private HomeViewModel homeViewModel;
     private TextView textView;
+    private TextView newTextView;
     private View root;
     private Button[] buttons;
     private int i = 0;
@@ -41,19 +42,21 @@ public class GameFragment extends Fragment {
     private boolean allow;
     private Integer value;
     private static Handler handler;
-
+    private static Handler handler2;
+    private int time;
 
 
 
     @SuppressLint("HandlerLeak")
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
+
         allow = true;
         value = 0;
         homeViewModel =
                 ViewModelProviders.of(getActivity()).get(HomeViewModel.class);
         //View root = inflater.inflate(R.layout.fragment_game_normal, container, false);
-
+        homeViewModel.setStopGame(false);
 
         handler = new Handler(){
             @Override
@@ -65,11 +68,24 @@ public class GameFragment extends Fragment {
 
                 }
 
+
+            }
+        };
+
+       handler2 = new Handler(){
+            @Override
+            public void handleMessage(Message msg){
+                Bundle bundle = msg.getData();
+                time = bundle.getInt("KEY2");
+
+                newTextView = root.findViewById(R.id.text1);
+                newTextView.setText("Pozostały czas: " + (time+1));
+
             }
         };
 
 
-        final Timer timer = new Timer(homeViewModel.getTime().getValue(), handler);
+        final Timer timer = new Timer(homeViewModel.getTime().getValue(), handler, handler2);
         timer.run();
 
 
@@ -86,6 +102,9 @@ public class GameFragment extends Fragment {
             textView = root.findViewById(R.id.text_gallery);
         }
         Animation animation = new Animation(root);
+
+
+
         reset = root.findViewById(R.id.reset);
         back = root.findViewById(R.id.back);
         back.setOnClickListener(new View.OnClickListener() {
@@ -101,36 +120,41 @@ public class GameFragment extends Fragment {
             }
         });
         homeViewModel.setTurn(i);
-        homeViewModel.getStop().observe(getActivity(), new Observer<Boolean>() {
-            @Override
-            public void onChanged(Boolean aBoolean) {
 
-                if (homeViewModel.getStop().getValue() == true){
-                final AlertDialog.Builder builder = new AlertDialog.Builder(getActivity(), R.style.MyDialogTheme);
-                builder
-                        .setTitle("KONIEC GRY")
-                        .setMessage("Czas się skończył, może następnym razem się uda")
-                        .setNeutralButton("Powrót", new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialogInterface, int i) {
-                                Navigation.findNavController(getActivity(),R.id.nav_host_fragment).navigate(R.id.action_nav_game_to_nav_home);
-                            }
-                        })
-                        .setPositiveButton("Zagraj ponownie", new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialogInterface, int i) {
-                                Navigation.findNavController(getActivity(),R.id.nav_host_fragment).navigate(R.id.action_nav_game_self);
-                            }
-                        });
+        if (!timer.isInterrupted()){
+            homeViewModel.getStop().observe(getActivity(), new Observer<Boolean>() {
+                @Override
+                public void onChanged(Boolean aBoolean) {
 
-                builder.create().show();}
+                    if (homeViewModel.getStop().getValue() == true && !homeViewModel.getStopGame().getValue()){
+                        newTextView.setText("STOP CZAS");
+                    final AlertDialog.Builder builder = new AlertDialog.Builder(getActivity(), R.style.MyDialogTheme);
+                    builder
+                            .setTitle("KONIEC GRY")
+                            .setMessage("Czas się skończył, może następnym razem się uda")
+                            .setNeutralButton("Powrót", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialogInterface, int i) {
+                                    Navigation.findNavController(getActivity(),R.id.nav_host_fragment).navigate(R.id.action_nav_game_to_nav_home);
+                                }
+                            })
+                            .setPositiveButton("Zagraj ponownie", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialogInterface, int i) {
+                                    Navigation.findNavController(getActivity(),R.id.nav_host_fragment).navigate(R.id.action_nav_game_self);
+                                }
+                            });
 
-                timer.interrupt();
-                if (homeViewModel.getStop().getValue() == true){
-                    homeViewModel.setStop(false);}
+                    builder.create().show();}
 
-            }
-        });
+                    timer.interrupt();
+                    if (homeViewModel.getStop().getValue() == true){
+                        homeViewModel.setStop(false);}
+
+                }
+            });
+        }
+
         buttons = new Button[9];
         img = new int[9];
         final Board board = new Board(3);
@@ -152,7 +176,7 @@ public class GameFragment extends Fragment {
                     homeViewModel.getTurn().observe(getActivity(), new Observer<Integer>() {
                         @Override
                         public void onChanged(Integer integer) {
-                            textView.setText("KOLEJ GRACZA NR " + (integer%2+1));
+
                             if (homeViewModel.getWithWho().getValue()){
                                 if (sym == 0) {
                                     if (img[kCopy] == 0) {
@@ -202,6 +226,9 @@ public class GameFragment extends Fragment {
                     buttons[kCopy].setEnabled(false);
                     board.turn(kCopy, homeViewModel.getTurn().getValue()%2);
                     if(board.check()){
+                        timer.interrupt();
+                        homeViewModel.setStopGame(true);
+                        allow = false;
                         int winner = (homeViewModel.getTurn().getValue()%2);
                         if (winner == 0){winner = 2;}
                         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity(), R.style.MyDialogTheme);
@@ -222,11 +249,13 @@ public class GameFragment extends Fragment {
                                 });
 
                         builder.create().show();
-                        allow = false;
-                        timer.interrupt();
+
+
                     }
                     else if (board.areAllMovesDone()){
-
+                        timer.interrupt();
+                        homeViewModel.setStopGame(true);
+                        allow = false;
                         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity(), R.style.MyDialogTheme);
                         builder
                                 .setTitle("KONIEC GRY")
@@ -244,16 +273,22 @@ public class GameFragment extends Fragment {
                                     }
                                 });
                         builder.create().show();
-                        allow = false;
-                        timer.interrupt();
+
+
 
                     }
-                    if (!homeViewModel.getWithWho().getValue() && homeViewModel.getTurn().getValue()%2==1 && allow){
+
+                    if (!homeViewModel.getWithWho().getValue() && homeViewModel.getTurn().getValue()%2==1 && allow) {
                         ComputerPlay(board, sym);
-                        homeViewModel.setTurn(i);
-                        if(board.check()){
-                            int winner = (homeViewModel.getTurn().getValue()%2);
-                            if (winner == 0){winner = 2;}
+                        textView.setText("KOLEJ GRACZA NR " + (homeViewModel.getTurn().getValue() % 2 + 1));
+                        if (board.check()) {
+                            homeViewModel.setStopGame(true);
+                            timer.interrupt();
+                            int winner = (homeViewModel.getTurn().getValue() % 2 + 1);
+                            if (winner == 0) {
+                                winner = 2;
+                            }
+                            homeViewModel.setTurn(i);
                             final AlertDialog.Builder builder = new AlertDialog.Builder(getActivity(), R.style.MyDialogTheme);
                             builder
                                     .setTitle("KONIEC GRY")
@@ -261,22 +296,22 @@ public class GameFragment extends Fragment {
                                     .setNeutralButton("Powrót", new DialogInterface.OnClickListener() {
                                         @Override
                                         public void onClick(DialogInterface dialogInterface, int i) {
-                                            Navigation.findNavController(getActivity(),R.id.nav_host_fragment).navigate(R.id.action_nav_game_to_nav_home);
+                                            Navigation.findNavController(getActivity(), R.id.nav_host_fragment).navigate(R.id.action_nav_game_to_nav_home);
                                         }
                                     })
                                     .setPositiveButton("Zagraj ponownie", new DialogInterface.OnClickListener() {
                                         @Override
                                         public void onClick(DialogInterface dialogInterface, int i) {
-                                            Navigation.findNavController(getActivity(),R.id.nav_host_fragment).navigate(R.id.action_nav_game_self);
+                                            Navigation.findNavController(getActivity(), R.id.nav_host_fragment).navigate(R.id.action_nav_game_self);
                                         }
                                     });
 
                             builder.create().show();
+
+
+                        } else if (board.areAllMovesDone()) {
                             timer.interrupt();
-
-                        }
-                        else if (board.areAllMovesDone()){
-
+                            homeViewModel.setStopGame(true);
                             AlertDialog.Builder builder = new AlertDialog.Builder(getActivity(), R.style.MyDialogTheme);
                             builder
                                     .setTitle("KONIEC GRY")
@@ -284,20 +319,24 @@ public class GameFragment extends Fragment {
                                     .setNeutralButton("Powrót", new DialogInterface.OnClickListener() {
                                         @Override
                                         public void onClick(DialogInterface dialogInterface, int i) {
-                                            Navigation.findNavController(getActivity(),R.id.nav_host_fragment).navigate(R.id.action_nav_game_to_nav_home);
+                                            Navigation.findNavController(getActivity(), R.id.nav_host_fragment).navigate(R.id.action_nav_game_to_nav_home);
                                         }
                                     })
                                     .setPositiveButton("Zagraj ponownie", new DialogInterface.OnClickListener() {
                                         @Override
                                         public void onClick(DialogInterface dialogInterface, int i) {
-                                            Navigation.findNavController(getActivity(),R.id.nav_host_fragment).navigate(R.id.action_nav_game_self);
+                                            Navigation.findNavController(getActivity(), R.id.nav_host_fragment).navigate(R.id.action_nav_game_self);
                                         }
                                     });
                             builder.create().show();
-                            timer.interrupt();
+
 
                         }
+
                     }
+                    int who = (homeViewModel.getTurn().getValue()%2);
+                    if (who == 0){who=2;}
+                    textView.setText("KOLEJ GRACZA NR " + who);
 
                 }
             });
